@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { MetricsRibbon } from './components/MetricsRibbon';
 import { ScorecardView } from './components/ScorecardView';
 import { MapView } from './components/MapView';
+import { ThreeFloodBasinView } from './components/ThreeFloodBasinView';
 import { TasksView } from './components/TasksView';
 import { AnalyticsView } from './components/AnalyticsView';
 import { SmsHubView } from './components/SmsHubView';
@@ -15,7 +16,7 @@ import { School, Task, Report, Official, ScoringRuleConfig, UserRole, TaskStatus
 import { AlertTriangle, CheckCircle, Info, Sparkles, X } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'map' | 'scorecard' | 'tasks' | 'analytics' | 'sms-hub' | 'admin'>('scorecard');
+  const [activeTab, setActiveTab] = useState<'map' | 'scorecard' | 'tasks' | 'analytics' | '3d-basin' | 'sms-hub' | 'admin'>('scorecard');
   const [userRole, setUserRole] = useState<UserRole>('DEO_DISTRICT');
   
   // Data state from DataService
@@ -169,6 +170,15 @@ export default function App() {
             onSelectSchool={(school) => setSelectedSchoolForDetail(school)}
             onOpenSmsModal={(code) => handleOpenSmsModal(code)}
             onCreateTaskForSchool={(school) => handleOpenCreateTaskModal(school)}
+          />
+        )}
+
+        {activeTab === '3d-basin' && (
+          <ThreeFloodBasinView
+            schools={schools}
+            selectedSchool={selectedSchoolForDetail}
+            onSelectSchool={(school) => setSelectedSchoolForDetail(school)}
+            onOpenSmsModal={(code) => handleOpenSmsModal(code)}
           />
         )}
 

@@ -3,8 +3,8 @@ import { ShieldAlert, Radio, Send, Bell } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface HeaderProps {
-  activeTab: 'map' | 'scorecard' | 'tasks' | 'analytics' | 'sms-hub' | 'admin';
-  setActiveTab: (tab: 'map' | 'scorecard' | 'tasks' | 'analytics' | 'sms-hub' | 'admin') => void;
+  activeTab: 'map' | 'scorecard' | 'tasks' | 'analytics' | '3d-basin' | 'sms-hub' | 'admin';
+  setActiveTab: (tab: 'map' | 'scorecard' | 'tasks' | 'analytics' | '3d-basin' | 'sms-hub' | 'admin') => void;
   openSmsModal: () => void;
   userRole: UserRole;
   setUserRole: (role: UserRole) => void;
@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Zone 2: Navigation Links (single-line, 1-2 word labels) */}
-          <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-4.5 text-sm font-medium text-slate-600">
             <button
               onClick={() => setActiveTab('scorecard')}
               className={`transition-colors whitespace-nowrap shrink-0 pb-1 border-b-2 text-sm ${
@@ -58,6 +58,16 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               Map Board
+            </button>
+            <button
+              onClick={() => setActiveTab('3d-basin')}
+              className={`transition-colors whitespace-nowrap shrink-0 pb-1 border-b-2 text-sm flex items-center gap-1 ${
+                activeTab === '3d-basin'
+                  ? 'border-blue-600 text-blue-600 font-semibold'
+                  : 'border-transparent hover:text-slate-900 hover:border-slate-300'
+              }`}
+            >
+              <span>3D Basin</span>
             </button>
             <button
               onClick={() => setActiveTab('tasks')}
@@ -149,6 +159,12 @@ export const Header: React.FC<HeaderProps> = ({
             className={`whitespace-nowrap ${activeTab === 'map' ? 'text-blue-600 font-bold' : ''}`}
           >
             Map
+          </button>
+          <button
+            onClick={() => setActiveTab('3d-basin')}
+            className={`whitespace-nowrap ${activeTab === '3d-basin' ? 'text-blue-600 font-bold' : ''}`}
+          >
+            3D Basin
           </button>
           <button
             onClick={() => setActiveTab('tasks')}

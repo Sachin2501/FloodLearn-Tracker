@@ -33,7 +33,10 @@ import {
   Layers, 
   ArrowUpRight,
   Filter,
-  BarChart3
+  BarChart3,
+  Download,
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface AnalyticsViewProps {
@@ -53,6 +56,9 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     schools.find((s) => s.latestScoreColor === 'RED')?.code || schools[0]?.code || 'SCH102'
   );
 
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isSchoolDownloaded, setIsSchoolDownloaded] = useState(false);
+
   // Raw 30-day trend data
   const rawTrendData = useMemo(() => generate30DayDistrictTrend(), []);
 
@@ -62,6 +68,202 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
     if (timeRange === '14D') return rawTrendData.slice(-14);
     return rawTrendData;
   }, [rawTrendData, timeRange]);
+
+  // Export displayed learning continuity trend data with dates, scores, and school identifiers
+  const handleDownloadCSV = () => {
+    // Filter schools matching currently active block filter
+    const targetSchools = selectedBlock === 'ALL'
+      ? schools
+      : schools.filter((s) => s.block === selectedBlock);
+
+    // Number of days in the displayed timeframe
+    const numDays = timeRange === '7D' ? 7 : timeRange === '14D' ? 14 : 30;
+
+    const csvLines: string[] = [];
+
+    // Formal Header Block for Offline District Education & Disaster Management reporting
+    csvLines.push('"===================================================================================================="');
+    csvLines.push('"DISTRICT ELEMENTARY EDUCATION OFFICE & DDMA - MORIGAON DISTRICT, ASSAM"');
+    csvLines.push('"EMERGENCY LEARNING CONTINUITY TRACKER - OFFLINE DISTRICT RESPONSE & ASSESSMENT REPORT"');
+    csvLines.push(`"Report Scope: ${selectedBlock === 'ALL' ? 'All Blocks (District-wide Comprehensive)' : selectedBlock}"`);
+    csvLines.push(`"Timeframe: Last ${numDays} Days (October 2026 Monsoon Flood Period)"`);
+    csvLines.push(`"Generated On: ${new Date().toISOString()}"`);
+    csvLines.push(`"Total Monitored Schools: ${targetSchools.length}"`);
+    csvLines.push('"===================================================================================================="');
+    csvLines.push('');
+
+    // Table 1: School-Level Daily Continuity Trend Records
+    csvLines.push('"SECTION 1: SCHOOL-LEVEL DAILY LEARNING CONTINUITY TRENDS & INTERVENTIONS"');
+    const schoolHeaders = [
+      'Date',
+      'Day Index',
+      'School Code',
+      'School Name',
+      'Village',
+      'Cluster',
+      'Block',
+      'District',
+      'Total Enrolled Students',
+      'Learning Continuity Score (0-100)',
+      'Score Status Color',
+      'School Status',
+      'Days Closed',
+      'Students Actively Engaged',
+      'Engagement Rate (%)',
+      'Emergency Materials Delivered',
+      'Flood Risk Zone',
+      'Headmaster Name',
+      'Headmaster Phone',
+      'Assigned Responsible Official',
+      'Official Designation',
+      'Official Phone',
+      'Field Observations & Milestones'
+    ];
+    csvLines.push(schoolHeaders.join(','));
+
+    // Populate daily records for each school over the displayed timeframe
+    targetSchools.forEach((school) => {
+      const fullTrajectory = generateSchoolTrajectory(school);
+      const displayedPoints = fullTrajectory.slice(-numDays);
+
+      displayedPoints.forEach((pt) => {
+        const fullDateStr = `2026-10-${pt.dayIndex.toString().padStart(2, '0')}`;
+        const scoreColor = pt.score >= 65 ? 'GREEN' : pt.score >= 35 ? 'YELLOW' : 'RED';
+        const estDaysClosed = pt.status === 'CLOSED' ? Math.max(1, Math.min(6, pt.dayIndex - 6)) : pt.status === 'PARTIALLY_OPEN' ? 2 : 0;
+        const engagedCount = Math.round((pt.engagementPercent / 100) * school.totalStudents);
+
+        const row = [
+          `"${fullDateStr}"`,
+          pt.dayIndex,
+          `"${school.code}"`,
+          `"${school.name.replace(/"/g, '""')}"`,
+          `"${school.village.replace(/"/g, '""')}"`,
+          `"${school.cluster}"`,
+          `"${school.block}"`,
+          `"${school.district}"`,
+          school.totalStudents,
+          pt.score,
+          `"${scoreColor}"`,
+          `"${pt.status}"`,
+          estDaysClosed,
+          engagedCount,
+          `${pt.engagementPercent}%`,
+          pt.materialsDelivered ? 'YES' : 'NO',
+          `"${school.floodRiskZone.replace(/_/g, ' ')}"`,
+          `"${school.headmasterName.replace(/"/g, '""')}"`,
+          `"${school.headmasterPhone}"`,
+          `"${school.assignedOfficialName.replace(/"/g, '""')}"`,
+          `"${school.assignedOfficialRole.replace(/"/g, '""')}"`,
+          `"${school.assignedOfficialPhone}"`,
+          `"${(pt.eventNote || (pt.status === 'CLOSED' ? 'Inundated road access cut off' : pt.status === 'PARTIALLY_OPEN' ? 'Classes operating in temporary shelter' : 'Regular classes active')).replace(/"/g, '""')}"`
+        ];
+        csvLines.push(row.join(','));
+      });
+    });
+
+    csvLines.push('');
+    csvLines.push('"===================================================================================================="');
+    csvLines.push('"SECTION 2: DISTRICT-WIDE AGGREGATED DAILY CONTINUITY SCORECARD SUMMARY"');
+    const districtHeaders = [
+      'Date',
+      'Full Date',
+      'Day Index',
+      'Avg District Continuity Score (0-100)',
+      'Students Engaged (%)',
+      'Green Schools (%)',
+      'Yellow Schools (%)',
+      'Red Schools (%)',
+      'Active Red Schools Count',
+      'Cumulative Relief Tasks Completed',
+      'River Water Level vs Danger Mark',
+      'Flood Phase',
+      'District Phase Notes'
+    ];
+    csvLines.push(districtHeaders.join(','));
+
+    trendData.forEach((d) => {
+      const dRow = [
+        `"${d.date}"`,
+        `"${d.fullDate}"`,
+        d.dayIndex,
+        d.avgDistrictScore,
+        `${d.studentsEngagedPercent}%`,
+        `${d.greenPercent}%`,
+        `${d.yellowPercent}%`,
+        `${d.redPercent}%`,
+        d.activeRedSchools,
+        d.tasksCompletedCumulative,
+        `"${d.riverWaterLevelMeters > 0 ? `+${d.riverWaterLevelMeters}m` : `${d.riverWaterLevelMeters}m`}"`,
+        `"${d.floodPhase.replace(/_/g, ' ')}"`,
+        `"${(d.phaseNote || '').replace(/"/g, '""')}"`
+      ];
+      csvLines.push(dRow.join(','));
+    });
+
+    // Create file and trigger browser download
+    const csvContent = csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const blockSlug = selectedBlock === 'ALL' ? 'district' : selectedBlock.toLowerCase().replace(/\s+/g, '_');
+    const filename = `floodlearn_continuity_report_${blockSlug}_${timeRange.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsDownloaded(true);
+    setTimeout(() => setIsDownloaded(false), 2500);
+  };
+
+  // Export individual school trajectory to CSV
+  const handleDownloadSchoolCSV = () => {
+    if (!focusedSchool) return;
+    const headers = [
+      'Date',
+      'Day Index',
+      'School Code',
+      'School Name',
+      'Cluster',
+      'Block',
+      'Continuity Score (0-100)',
+      'Status',
+      'Student Engagement (%)',
+      'Materials Delivered',
+      'Milestone / Event Note'
+    ];
+
+    const rows = schoolTrajectory.map((p) => [
+      `"${p.date}"`,
+      p.dayIndex,
+      `"${focusedSchool.code}"`,
+      `"${focusedSchool.name.replace(/"/g, '""')}"`,
+      `"${focusedSchool.cluster}"`,
+      `"${focusedSchool.block}"`,
+      p.score,
+      `"${p.status}"`,
+      `${p.engagementPercent}%`,
+      p.materialsDelivered ? 'YES' : 'NO',
+      `"${(p.eventNote || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const filename = `${focusedSchool.code}_learning_continuity_trajectory_${timeRange.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setIsSchoolDownloaded(true);
+    setTimeout(() => setIsSchoolDownloaded(false), 2500);
+  };
 
   // Selected school for deep-dive trajectory
   const focusedSchool = useMemo(() => {
@@ -174,6 +376,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
               <option value="Bhuragaon Block">Bhuragaon Block</option>
               <option value="Dhing Block">Dhing Block</option>
             </select>
+
+            {/* Download CSV Button */}
+            <button
+              onClick={handleDownloadCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-lg shadow-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title="Download learning continuity trend data with dates, scores, and school identifiers for offline district reporting"
+            >
+              {isDownloaded ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>CSV Downloaded</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5 text-white" />
+                  <span>Download CSV</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -501,8 +722,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             </p>
           </div>
 
-          {/* School Selector */}
-          <div className="flex items-center gap-2 text-xs">
+          {/* School Selector & Export */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-slate-500 font-medium">Select School:</span>
             <select
               value={selectedSchoolCode}
@@ -515,6 +736,24 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={handleDownloadSchoolCSV}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              title={`Export ${focusedSchool.code} 30-day response trajectory to CSV`}
+            >
+              {isSchoolDownloaded ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Exported</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Export School CSV</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
