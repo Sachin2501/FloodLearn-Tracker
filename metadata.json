@@ -1,0 +1,6 @@
+{
+  "name": "FloodLearn Tracker Dashboard",
+  "description": "Real-time emergency learning continuity tracker and task assignment system for flood-affected districts in India, powered by SMS/WhatsApp field check-ins.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

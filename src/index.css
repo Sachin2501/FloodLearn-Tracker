@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+code, kbd, samp, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.custom-school-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Ensure Leaflet popups fit nicely */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.4 !important;
+}
